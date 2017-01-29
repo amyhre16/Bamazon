@@ -18,47 +18,48 @@ var connection = mysql.createConnection({
 connection.connect();
 
 
+displayTable(promptUser);
 
+function promptUser() {
+	// create questions to ask the user
+	inquirer.prompt([
+		{
+			type: "input",
+			name: "chosen_id",
+			message: "Please enter the ID of the product you would like to purchase."
+		},
+		{
+			type: "input",
+			name: "numOfProd",
+			message: "How many units of the product would you like to purchase?"
+		}
+	]).then(function(response) {
+		// select the stock_quantity column from the products table where the item_id is the same as the id entered by the user
+		connection.query('SELECT stock_quantity, product_name FROM products WHERE item_id = ' + response.chosen_id, function(err, row) {
+			// if there's an error, console the error and kill the code
+			if (err) {
+				throw err;
+			}
+			if (row[0].stock_quantity >= response.numOfProd) {
+				var new_stock_quantity = row[0].stock_quantity - response.numOfProd;
+				connection.query('UPDATE products SET stock_quantity = ' + new_stock_quantity + ' WHERE item_id = ' + response.chosen_id);
+				displayTable();
+			}
+			else if (row[0].stock_quantity === 0) {
+				console.log("\nI'm sorry! We seem to be out of " + row[0].product_name + "\n");
+			}
+			else {
+				console.log("\nI'm sorry! There is not enough of " + row[0].product_name + " in stock to fulfill your order.\n");
+			}
+			promptContinue();
+		});
 
-
-// create questions to ask the user
-inquirer.prompt([
-	{
-		type: "input",
-		name: "chosen_id",
-		message: "Please enter the ID of the product you would like to purchase."
-	},
-	{
-		type: "input",
-		name: "numOfProd",
-		message: "How many units of the product would you like to purchase?"
-	}
-]).then(function(response) {
-	// select the stock_quantity column from the products table where the item_id is the same as the id entered by the user
-	connection.query('SELECT stock_quantity FROM products WHERE item_id = ' + response.chosen_id, function(err, row) {
-		// if there's an error, console the error and kill the code
-		if (err) {
-			throw err;
-		}
-		if (row[0].stock_quantity >= response.numOfProd) {
-			var new_stock_quantity = row[0].stock_quantity - response.numOfProd;
-			connection.query('UPDATE products SET stock_quantity = ' + new_stock_quantity + ' WHERE item_id = ' + response.chosen_id);
-			// displayTable();
-		}
-		else {
-			console.log("I'm sorry! There is not enough of that product in stock to fulfill your order.");
-		}
-		// console.log(row);
 	});
-	displayTable();
-	// connection.end();
-
-});
-// displayTable();
+}
 
 
-// consider putting the prompt in a callback
-function displayTable() {
+
+function displayTable(callback) {
 	// connection.connect();
 	// select all columns from the products table
 	connection.query('SELECT * FROM products;', function(err, rows) {
@@ -85,11 +86,36 @@ function displayTable() {
 			table.push(row);
 		}
 		// print the table
+		console.log();
 		console.log(table.toString());
+		console.log();
+
+		if (callback) {
+			callback();
+		}
+		else {
+			promptContinue();
+		}
 	});
 	// connection.end();
 } // end of displayTable()
 
+function promptContinue() {
+	inquirer.prompt([
+		{
+			type: 'confirm'
+			, name: 'continue'
+			, message: 'Would you like to purchase another product?'
+		} // end of continue object
+	]).then(function(response) {
+		if (response.continue) {
+			promptUser();
+		}
 
-// end connection to SQL server
-// connection.end();
+		else {
+			// end connection to SQL server
+			console.log("\nGoodbye!");
+			connection.end();
+		}
+	});
+}

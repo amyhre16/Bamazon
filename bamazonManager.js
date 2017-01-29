@@ -1,3 +1,5 @@
+'use strict';
+
 var mysql = require('mysql');
 var inquirer = require('inquirer');
 
@@ -215,7 +217,7 @@ function promptContinue() {
 		}
 
 		else {
-			console.log("Good-bye!");
+			console.log("\nGood-bye!");
 			endConnection();
 		}
 	}); // end of .then()
