@@ -35,30 +35,38 @@ function promptUser() {
 		}
 	]).then(function(response) {
 		// select the stock_quantity column from the products table where the item_id is the same as the id entered by the user
-		connection.query('SELECT stock_quantity, product_name FROM products WHERE item_id = ' + response.chosen_id, function(err, row) {
+		connection.query('SELECT stock_quantity, product_name, price FROM products WHERE item_id = ' + response.chosen_id, function(err, row) {
 			// if there's an error, console the error and kill the code
 			if (err) {
 				throw err;
 			}
 			if (row[0].stock_quantity >= response.numOfProd) {
 				var new_stock_quantity = row[0].stock_quantity - response.numOfProd;
-				connection.query('UPDATE products SET stock_quantity = ' + new_stock_quantity + ' WHERE item_id = ' + response.chosen_id);
+				connection.query('UPDATE products SET stock_quantity = ' + new_stock_quantity + ' WHERE item_id = ' + response.chosen_id, function(err, result) {
+					if (err) {
+						throw err;
+					}
+				}); // end of UPDATE query
+				
+				var totalCost = row[0].price * response.numOfProd;
+				console.log("\nTotal Cost of Purchase: $" + totalCost);
 				displayTable();
 			}
 			else if (row[0].stock_quantity === 0) {
-				console.log("\nI'm sorry! We seem to be out of " + row[0].product_name + "\n");
+				console.log("\nI'm sorry! We don't seem to have " + row[0].product_name + " in stock.\n");
+				promptContinue();
 			}
 			else {
-				console.log("\nI'm sorry! There is not enough of " + row[0].product_name + " in stock to fulfill your order.\n");
+				console.log("\nI'm sorry! There is not enough " + row[0].product_name + " in stock to fulfill your order.\n");
+				promptContinue();
 			}
-			promptContinue();
 		});
 
 	});
 }
 
 
-
+// consider putting the prompt in a callback
 function displayTable(callback) {
 	// connection.connect();
 	// select all columns from the products table
@@ -109,12 +117,13 @@ function promptContinue() {
 		} // end of continue object
 	]).then(function(response) {
 		if (response.continue) {
-			promptUser();
+			console.log();
+			displayTable(promptUser);
 		}
 
 		else {
 			// end connection to SQL server
-			console.log("\nGoodbye!");
+			console.log("Goodbye!");
 			connection.end();
 		}
 	});
