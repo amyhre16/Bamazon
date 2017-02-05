@@ -17,7 +17,7 @@ var connection = mysql.createConnection({
 // connect to the server
 connection.connect();
 
-
+// run the displayTable and pass in promptUser as a callback function
 displayTable(promptUser);
 
 function promptUser() {
@@ -40,35 +40,43 @@ function promptUser() {
 			if (err) {
 				throw err;
 			}
+
+			// if there is enough of the product in the inventory, the allow the user to purchase the product
 			if (row[0].stock_quantity >= response.numOfProd) {
+				// subtract the user's response from the inventory
 				var new_stock_quantity = row[0].stock_quantity - response.numOfProd;
-				connection.query('UPDATE products SET stock_quantity = ' + new_stock_quantity + ' WHERE item_id = ' + response.chosen_id, function(err, result) {
+				// update the table 
+				connection.query('UPDATE products SET ? WHERE ?', [ { stock_quantity: new_stock_quantity}, {item_id: response.chosen_id} ], function(err, result) {
+					// if there is an error, console the err and kill the code
 					if (err) {
 						throw err;
 					}
 				}); // end of UPDATE query
 				
+				// console the price of the interaction
 				var totalCost = row[0].price * response.numOfProd;
 				console.log("\nTotal Cost of Purchase: $" + totalCost);
+
+				// display the updated table
 				displayTable();
 			}
+			// if there is 0 stock left, inform the user and ask if they would like to continue
 			else if (row[0].stock_quantity === 0) {
 				console.log("\nI'm sorry! We don't seem to have " + row[0].product_name + " in stock.\n");
 				promptContinue();
 			}
+			// if the user tries to purchase more than there is in the inventory, inform the user and ask if they would like to continue
 			else {
 				console.log("\nI'm sorry! There is not enough " + row[0].product_name + " in stock to fulfill your order.\n");
 				promptContinue();
 			}
-		});
-
-	});
-}
+		}); // end of connection.query()
+	}); // end of .then()
+} // end of promptUser()
 
 
 // consider putting the prompt in a callback
 function displayTable(callback) {
-	// connection.connect();
 	// select all columns from the products table
 	connection.query('SELECT * FROM products;', function(err, rows) {
 		// if there's an error, console the error and kill the code
@@ -98,9 +106,11 @@ function displayTable(callback) {
 		console.log(table.toString());
 		console.log();
 
+		// if there was a callback function passed in, the run the callback
 		if (callback) {
 			callback();
 		}
+		// otherwise, prompt the user if they would like to continue
 		else {
 			promptContinue();
 		}
@@ -109,6 +119,7 @@ function displayTable(callback) {
 } // end of displayTable()
 
 function promptContinue() {
+	// prompt the user if they would like to continue
 	inquirer.prompt([
 		{
 			type: 'confirm'
@@ -116,11 +127,13 @@ function promptContinue() {
 			, message: 'Would you like to purchase another product?'
 		} // end of continue object
 	]).then(function(response) {
+		// if they would like to continue, display the table and run promptUser
 		if (response.continue) {
 			console.log();
 			displayTable(promptUser);
 		}
 
+		// otherwise, say good-bye and end the connection to the database
 		else {
 			// end connection to SQL server
 			console.log("Goodbye!");
