@@ -101,7 +101,7 @@ function updateInventory() {
 			, name: 'stock_quantity'
 			, message: 'How many of the product would you like to add?'
 			, validate: function(num) {
-				return !isNaN(parseInt(num));
+				return !isNaN(parseInt(num)) && parseInt(num) > 0;
 			}
 		} // end of stock_quantity object
 	]).then(function(response) {
